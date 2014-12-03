@@ -5,65 +5,71 @@ import (
     "./neural"
 )
 
-func generateChannels(size int) []chan float64 {
-    channels := make([]chan float64, size)
+// func generateSynapses(size int) []*neural.Synapse {
+//     synapses := make([]*neural.Synapse, size)
+//     factory := new(neural.SynapseFactory)
 
-    for i := 0; i < size; i++ {
-        channels[i] = make(chan float64, 1)
-    }
+//     for i := 0; i < size; i++ {
+//         synapses[i] = factory.Create(1.0)
+//     }
 
-    return channels
-}
+//     return synapses
+// }
 
 func main() {
     // factory := new(neural.NeuronFactory)
 
-    compute := func (values []float64) float64 {
-        result := float64(0)
-
-        for _, value := range values {
-            result += value
-        }
-
-        return result
+    compute := func (value float64) float64 {
+        return value
     }
 
-    inputs := generateChannels(2)
+    synapseFactory := new(neural.SynapseFactory)
+    neuronFactory := new(neural.NeuronFactory)
 
-    starterNeuron1Inputs := make([]chan float64, 1)
-    starterNeuron1Inputs[0] = inputs[0];
+    generateSynapses := func (size int) []*neural.Synapse {
+        synapses := make([]*neural.Synapse, size)
 
-    starterNeuron1 := neural.Neuron{ Inputs: starterNeuron1Inputs, Outputs: generateChannels(3), Compute: compute }
+        for i := 0; i < size; i++ {
+            synapses[i] = synapseFactory.Create(1.0)
+        }
 
-    starterNeuron2Inputs := make([]chan float64, 1)
-    starterNeuron2Inputs[0] = inputs[1];
+        return synapses
+    }
 
-    starterNeuron2 := neural.Neuron{ Inputs: starterNeuron2Inputs, Outputs: generateChannels(3), Compute: compute }
+    // Id 0
+    starterNeuron1 := neuronFactory.Create(generateSynapses(1), generateSynapses(3), compute)
 
-    hiddenNeuron1Inputs := make([]chan float64, 2)
+    // Id 1
+    starterNeuron2 := neuronFactory.Create(generateSynapses(1), generateSynapses(3), compute)
+
+    hiddenNeuron1Inputs := make([]*neural.Synapse, 2)
     hiddenNeuron1Inputs[0] = starterNeuron1.Outputs[0];
     hiddenNeuron1Inputs[1] = starterNeuron2.Outputs[0];
 
-    hiddenNeuron1 := neural.Neuron{ Inputs: hiddenNeuron1Inputs, Outputs: generateChannels(1), Compute: compute }
+    // Id 2
+    hiddenNeuron1 := neuronFactory.Create(hiddenNeuron1Inputs, generateSynapses(1), compute)
 
-    hiddenNeuron2Inputs := make([]chan float64, 2)
+    hiddenNeuron2Inputs := make([]*neural.Synapse, 2)
     hiddenNeuron2Inputs[0] = starterNeuron1.Outputs[1];
     hiddenNeuron2Inputs[1] = starterNeuron2.Outputs[1];
 
-    hiddenNeuron2 := neural.Neuron{ Inputs: hiddenNeuron2Inputs, Outputs: generateChannels(1), Compute: compute }
+    // Id 3
+    hiddenNeuron2 := neuronFactory.Create(hiddenNeuron2Inputs, generateSynapses(1), compute)
 
-    hiddenNeuron3Inputs := make([]chan float64, 2)
+    hiddenNeuron3Inputs := make([]*neural.Synapse, 2)
     hiddenNeuron3Inputs[0] = starterNeuron1.Outputs[2];
     hiddenNeuron3Inputs[1] = starterNeuron2.Outputs[2];
 
-    hiddenNeuron3 := neural.Neuron{ Inputs: hiddenNeuron3Inputs, Outputs: generateChannels(1), Compute: compute }
+    // Id 4
+    hiddenNeuron3 := neuronFactory.Create(hiddenNeuron3Inputs, generateSynapses(1), compute)
 
-    terminalNeuronInputs := make([]chan float64, 3)
+    terminalNeuronInputs := make([]*neural.Synapse, 3)
     terminalNeuronInputs[0] = hiddenNeuron1.Outputs[0];
     terminalNeuronInputs[1] = hiddenNeuron2.Outputs[0];
     terminalNeuronInputs[2] = hiddenNeuron3.Outputs[0];
 
-    terminalNeuron := neural.Neuron{ Inputs: terminalNeuronInputs, Outputs: generateChannels(1), Compute: compute }
+    // Id 5
+    terminalNeuron := neuronFactory.Create(terminalNeuronInputs, generateSynapses(1), compute)
 
     go starterNeuron1.Run()
     go starterNeuron2.Run()
@@ -77,13 +83,13 @@ func main() {
     fmt.Println("Inject data")
 
     // go func() {
-    inputs[0] <- 1.0
-    inputs[1] <- 3.0
+    starterNeuron1.Inputs[0].Channel <- 1.0
+    starterNeuron2.Inputs[0].Channel <- 3.0
     // starterNeuron2.Inputs[0] <- 1.0
     // }()
 
     for i, output := range terminalNeuron.Outputs {
-        fmt.Println("Output", i, <- output)
+        fmt.Println("Output", i, <- output.Channel)
     }
 
     return

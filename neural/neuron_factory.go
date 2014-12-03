@@ -1,19 +1,10 @@
 package neural
 
-type NeuronFactory struct {}
+type NeuronFactory struct {
+    Id int
+}
 
-func (_ *NeuronFactory) Create(inputSize int, outputSize int, compute func([]float64) float64) *Neuron {
-
-    inputs := make([]chan float64, inputSize)
-    outputs := make([]chan float64, outputSize)
-
-    for i := 0; i < inputSize; i++ {
-        inputs[i] = make(chan float64, 1)
-    }
-
-    for j := 0; j < outputSize; j++ {
-        outputs[j] = make(chan float64, 1)
-    }
-
-    return &Neuron{ Inputs: inputs, Outputs: outputs, Compute: compute }
+func (f *NeuronFactory) Create(inputs []*Synapse, outputs []*Synapse, compute func(float64) float64) *Neuron {
+    f.Id++
+    return &Neuron{ Id: f.Id, Inputs: inputs, Outputs: outputs, Compute: compute }
 }
